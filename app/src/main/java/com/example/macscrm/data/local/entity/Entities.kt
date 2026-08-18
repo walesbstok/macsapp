@@ -59,6 +59,8 @@ val importanceScore: Int,
             segment = h.segment,
             createdAt = h.createdAt,
             updatedAt = h.updatedAt
+            postalCode = h.postalCode,
+        importanceScore = h.importanceScore
         )
     }
 }
