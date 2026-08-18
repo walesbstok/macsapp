@@ -19,11 +19,17 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      # Tworzymy flagę AndroidX w głównym folderze ORAZ w folderze app
-      - name: Configure AndroidX Properties
+      # Zwiększamy limit pamięci RAM dla kompilatora do 4 Gigabajtów
+      # Wyłączamy też zbędny Daemon, aby zaoszczędzić pamięć
+      - name: Configure Gradle Memory & AndroidX
         run: |
           echo "android.useAndroidX=true" >> gradle.properties
+          echo "org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g" >> gradle.properties
+          echo "org.gradle.daemon=false" >> gradle.properties
+          
           echo "android.useAndroidX=true" >> app/gradle.properties
+          echo "org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g" >> app/gradle.properties
+          echo "org.gradle.daemon=false" >> app/gradle.properties
 
       - name: Build Debug APK
         run: gradle assembleDebug
