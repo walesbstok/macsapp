@@ -47,14 +47,14 @@ class BackupManager(private val database: AppDatabase) {
         meta.put("app", "MACS CRM")
         root.put("metadata", meta)
 
-      // Settings
+   // Settings
 val settings = settingsDao.getSettingsSnapshot()
 if (settings != null) {
     val settingsJson = JSONObject()
     settingsJson.put("brandName", settings.brandName)
     settingsJson.put("enableMeetingApprovals", settings.enableMeetingApprovals)
     val prodArray = JSONArray()
-    settings.productsList.split(",").filter { it.isNotEmpty() }.forEach { product -> prodArray.put(product.trim()) }
+    (settings.productsList ?: "").split(",").filter { it.isNotEmpty() }.forEach { product -> prodArray.put(product.trim()) }
     settingsJson.put("productsList", prodArray)
     root.put("settings", settingsJson)
 }
