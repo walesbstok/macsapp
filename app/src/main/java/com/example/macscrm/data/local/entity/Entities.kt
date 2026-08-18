@@ -20,7 +20,9 @@ data class HospitalEntity(
     val notes: String,
     val segment: String,
     val createdAt: String,
-    val updatedAt: String
+    val updatedAt: String,
+    val postalCode: String,
+val importanceScore: Int,
 ) {
     fun toDomain(): Hospital = Hospital(
         id = id,
