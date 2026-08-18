@@ -54,9 +54,7 @@ class BackupManager(private val database: AppDatabase) {
             settingsJson.put("brandName", settings.brandName)
             settingsJson.put("enableMeetingApprovals", settings.enableMeetingApprovals)
             val prodArray = JSONArray()
-           settings.productsList.split(",").map { it.trim() }.filter { it.isNotEmpty() }.forEach { product ->
-    prodArray.put(product)
-}
+          settings.productsList.split(",").map { it.trim() }.filter { it.isNotEmpty() }.forEach { product -> prodArray.put(product) }
             settingsJson.put("productsList", prodArray)
             root.put("settings", settingsJson)
         }
