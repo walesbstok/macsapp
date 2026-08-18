@@ -43,26 +43,26 @@ val importanceScore: Int,
     )
 
     companion object {
-        fun fromDomain(h: Hospital): HospitalEntity = HospitalEntity(
-            id = h.id,
-            name = h.name,
-            address = h.address,
-            city = h.city,
-            voivodeship = h.voivodeship,
-            phone = h.phone,
-            email = h.email,
-            website = h.website,
-            pipelineStatus = h.pipelineStatus.name,
-            lat = h.lat,
-            lng = h.lng,
-            notes = h.notes,
-            segment = h.segment,
-            createdAt = h.createdAt,
-            updatedAt = h.updatedAt
-            postalCode = h.postalCode,
-        importanceScore = h.importanceScore
-        )
-    }
+    fun fromDomain(h: Hospital): HospitalEntity = HospitalEntity(
+        id = h.id,
+        name = h.name,
+        address = h.address,
+        city = h.city,
+        voivodeship = h.voivodeship,
+        phone = h.phone,
+        email = h.email,
+        website = h.website,
+        pipelineStatus = h.pipelineStatus.name,
+        lat = h.lat,
+        lng = h.lng,
+        notes = h.notes,
+        segment = h.segment,
+        createdAt = h.createdAt,
+        updatedAt = h.updatedAt,
+        postalCode = h.postalCode,
+        importanceScore = h.importanceScore  // ADD THIS LINE
+    )
+}
 }
 
 @Entity(tableName = "departments")
