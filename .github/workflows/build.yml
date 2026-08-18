@@ -7,8 +7,25 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    steps:
+      steps:
     - uses: actions/checkout@v4
+
+    # Ten krok pokaże nam listę wszystkich plików w repozytorium
+    - name: List files in repository
+      run: ls -R
+
+    - name: set up JDK 17
+      uses: actions/setup-java@v5 # Zaktualizowano przy okazji do v5, aby zniknęło żółte ostrzeżenie
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+
+    - name: Build Debug APK
+      run: ./gradlew assembleDebug
+
 
     - name: set up JDK 17
       uses: actions/setup-java@v4
