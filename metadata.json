@@ -1,0 +1,6 @@
+{
+  "name": "Mac's CRM",
+  "description": "CRM system for medical representatives to manage contacts with doctors, hospitals, and sales visits.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

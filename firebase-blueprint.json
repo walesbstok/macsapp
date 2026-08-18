@@ -1,0 +1,165 @@
+{
+  "entities": {
+    "hospitals": {
+      "title": "Hospital",
+      "description": "Medical facilities and hospitals in the CRM",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "address": { "type": "string" },
+        "city": { "type": "string" },
+        "voivodeship": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "website": { "type": "string" },
+        "pipeline_status": { "type": "string", "enum": ["prospect", "active", "key_account", "inactive"] },
+        "lat": { "type": ["number", "null"] },
+        "lng": { "type": ["number", "null"] },
+        "notes": { "type": "string" },
+        "segment": { "type": "string", "enum": ["A", "B", "C"] },
+        "created_at": { "type": "string" },
+        "updated_at": { "type": "string" }
+      },
+      "required": ["id", "name", "city"]
+    },
+    "departments": {
+      "title": "Department",
+      "description": "Hospital departments and clinics",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "hospital_id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["id", "hospital_id", "name"]
+    },
+    "doctors": {
+      "title": "Doctor",
+      "description": "Doctors and medical personnel contacts",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "first_name": { "type": "string" },
+        "last_name": { "type": "string" },
+        "title": { "type": "string" },
+        "hospital_id": { "type": "string" },
+        "department_id": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "specialization": { "type": "string" },
+        "notes": { "type": "string" },
+        "created_at": { "type": "string" },
+        "updated_at": { "type": "string" }
+      },
+      "required": ["id", "first_name", "last_name", "hospital_id", "department_id"]
+    },
+    "meetings": {
+      "title": "Meeting",
+      "description": "CRM meetings and visits with medical personnel",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "meeting_date": { "type": "string" },
+        "hospital_id": { "type": "string" },
+        "department_id": { "type": ["string", "null"] },
+        "doctor_id": { "type": ["string", "null"] },
+        "doctor_ids": { "type": "array", "items": { "type": "string" } },
+        "product_tags": { "type": "array", "items": { "type": "string" } },
+        "content_markdown": { "type": "string" },
+        "meeting_type": { "type": "string" },
+        "closed_at": { "type": ["string", "null"] },
+        "approval_status": { "type": "string" },
+        "manager_comment": { "type": "string" },
+        "representative_name": { "type": "string" },
+        "created_at": { "type": "string" },
+        "updated_at": { "type": "string" }
+      },
+      "required": ["id", "title", "meeting_date", "hospital_id"]
+    },
+    "tasks": {
+      "title": "Task",
+      "description": "Follow-up tasks associated with meetings",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "meeting_id": { "type": "string" },
+        "description": { "type": "string" },
+        "due_date": { "type": ["string", "null"] },
+        "is_done": { "type": "boolean" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["id", "meeting_id", "description"]
+    },
+    "settings": {
+      "title": "SystemSettings",
+      "description": "Application settings and configurations",
+      "type": "object",
+      "properties": {
+        "brandName": { "type": "string" },
+        "enableMeetingApprovals": { "type": "boolean" },
+        "defaultMapLat": { "type": "number" },
+        "defaultMapLng": { "type": "number" },
+        "productsList": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "users": {
+      "title": "CrmUser",
+      "description": "Registered CRM users and roles",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string" },
+        "isActive": { "type": "boolean" },
+        "password": { "type": "string" },
+        "mustChangePassword": { "type": "boolean" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["id", "name", "email", "role"]
+    },
+    "trips": {
+      "title": "Trip",
+      "description": "Planned route trips",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "start_date": { "type": "string" },
+        "end_date": { "type": "string" },
+        "status": { "type": "string" },
+        "created_at": { "type": "string" }
+      }
+    },
+    "trip_days": {
+      "title": "TripDay",
+      "description": "Daily details for planned trips",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "trip_id": { "type": "string" },
+        "date": { "type": "string" },
+        "overnight_location": { "type": ["string", "null"] },
+        "overnight_sunday_location": { "type": ["string", "null"] },
+        "order": { "type": "number" }
+      }
+    },
+    "visits": {
+      "title": "Visit",
+      "description": "Planned visits within trip days",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "trip_day_id": { "type": "string" },
+        "hospital_id": { "type": "string" },
+        "department_id": { "type": "string" },
+        "doctor_id": { "type": ["string", "null"] },
+        "is_fixed_slot": { "type": "boolean" },
+        "time_slot": { "type": "string" }
+      }
+    }
+  }
+}
