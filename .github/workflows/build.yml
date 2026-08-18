@@ -16,11 +16,13 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      # Ta akcja automatycznie pobierze pełne środowisko Gradle i uruchomi budowanie za nas
-      - name: Build with Gradle
+      # 1. Ten krok pobierze i poprawnie skonfiguruje narzędzie Gradle w systemie
+      - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
-        with:
-          arguments: assembleDebug
+
+      # 2. Ten krok wykona kompilację przy użyciu pobranego wyżej programu
+      - name: Build Debug APK
+        run: gradle assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
