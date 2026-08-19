@@ -36,6 +36,15 @@ class BackupManager(private val database: AppDatabase) {
     private val userDao = database.userDao()
     private val settingsDao = database.settingsDao()
 
+    // Helper: read a JSON array of strings, tolerant of a missing/absent key
+    private fun JSONObject.getStringList(key: String): List<String> {
+        if (!has(key)) return emptyList()
+        val arr = optJSONArray(key) ?: return emptyList()
+        val list = mutableListOf<String>()
+        for (i in 0 until arr.length()) list.add(arr.getString(i))
+        return list
+    }
+
     suspend fun createBackupJson(): String {
         val root = JSONObject()
         val nowIso = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault()).format(Date())
@@ -47,17 +56,17 @@ class BackupManager(private val database: AppDatabase) {
         meta.put("app", "MACS CRM")
         root.put("metadata", meta)
 
-    // Settings
-val settings = settingsDao.getSettingsSnapshot()
-if (settings != null) {
-    val settingsJson = JSONObject()
-    settingsJson.put("brandName", settings.brandName)
-    settingsJson.put("enableMeetingApprovals", settings.enableMeetingApprovals)
-    val prodArray = JSONArray()
-    (settings.productsList ?: "").split(",").filter { it.isNotEmpty() }.forEach { product -> prodArray.put(product.trim()) }
-    settingsJson.put("productsList", prodArray)
-    root.put("settings", settingsJson)
-}
+        // Settings
+        val settings = settingsDao.getSettingsSnapshot()
+        if (settings != null) {
+            val settingsJson = JSONObject()
+            settingsJson.put("brandName", settings.brandName)
+            settingsJson.put("enableMeetingApprovals", settings.enableMeetingApprovals)
+            settingsJson.put("defaultMapLat", settings.defaultMapLat)
+            settingsJson.put("defaultMapLng", settings.defaultMapLng)
+            settingsJson.put("productsList", JSONArray(settings.productsList))
+            root.put("settings", settingsJson)
+        }
 
         // Users
         val users = userDao.getAllSnapshot()
@@ -70,6 +79,8 @@ if (settings != null) {
             obj.put("role", u.role)
             obj.put("isActive", u.isActive)
             obj.put("createdAt", u.createdAt)
+            obj.put("password", u.password)
+            obj.put("mustChangePassword", u.mustChangePassword)
             usersArray.put(obj)
         }
         root.put("users", usersArray)
@@ -81,12 +92,19 @@ if (settings != null) {
             val obj = JSONObject()
             obj.put("id", h.id)
             obj.put("name", h.name)
-            obj.put("city", h.city)
             obj.put("address", h.address)
-            obj.put("postalCode", h.postalCode)
+            obj.put("city", h.city)
+            obj.put("voivodeship", h.voivodeship)
+            obj.put("phone", h.phone)
+            obj.put("email", h.email)
+            obj.put("website", h.website)
             obj.put("pipelineStatus", h.pipelineStatus)
-            obj.put("importanceScore", h.importanceScore)
+            obj.put("lat", h.lat)
+            obj.put("lng", h.lng)
             obj.put("notes", h.notes)
+            obj.put("segment", h.segment)
+            obj.put("postalCode", h.postalCode)
+            obj.put("importanceScore", h.importanceScore)
             obj.put("createdAt", h.createdAt)
             obj.put("updatedAt", h.updatedAt)
             hospitalsArray.put(obj)
@@ -101,8 +119,7 @@ if (settings != null) {
             obj.put("id", d.id)
             obj.put("hospitalId", d.hospitalId)
             obj.put("name", d.name)
-            obj.put("floor", d.floor)
-            obj.put("notes", d.notes)
+            obj.put("type", d.type)
             obj.put("createdAt", d.createdAt)
             departmentsArray.put(obj)
         }
@@ -118,13 +135,11 @@ if (settings != null) {
             obj.put("departmentId", doc.departmentId)
             obj.put("firstName", doc.firstName)
             obj.put("lastName", doc.lastName)
-            obj.put("academicTitle", doc.academicTitle)
+            obj.put("title", doc.title)
             obj.put("specialization", doc.specialization)
-            obj.put("phoneNumber", doc.phoneNumber)
+            obj.put("phone", doc.phone)
             obj.put("email", doc.email)
-            obj.put("availabilityNotes", doc.availabilityNotes)
-            obj.put("attitude", doc.attitude)
-            obj.put("isKeyContact", doc.isKeyContact)
+            obj.put("notes", doc.notes)
             obj.put("createdAt", doc.createdAt)
             obj.put("updatedAt", doc.updatedAt)
             doctorsArray.put(obj)
@@ -140,12 +155,13 @@ if (settings != null) {
             obj.put("hospitalId", m.hospitalId)
             obj.put("departmentId", m.departmentId)
             obj.put("doctorId", m.doctorId)
+            obj.put("doctorIds", JSONArray(m.doctorIds))
             obj.put("title", m.title)
             obj.put("meetingDate", m.meetingDate)
+            obj.put("meetingType", m.meetingType)
             obj.put("representativeName", m.representativeName)
             obj.put("contentMarkdown", m.contentMarkdown)
-            obj.put("productTags", m.productTags)
-            obj.put("followUpPlan", m.followUpPlan)
+            obj.put("productTags", JSONArray(m.productTags))
             obj.put("closedAt", m.closedAt)
             obj.put("approvalStatus", m.approvalStatus)
             obj.put("managerComment", m.managerComment)
@@ -183,6 +199,7 @@ if (settings != null) {
             obj.put("endDate", tr.endDate)
             obj.put("title", tr.title)
             obj.put("status", tr.status)
+            obj.put("createdAt", tr.createdAt)
             tripsArray.put(obj)
         }
         root.put("trips", tripsArray)
@@ -194,8 +211,8 @@ if (settings != null) {
             obj.put("id", td.id)
             obj.put("tripId", td.tripId)
             obj.put("date", td.date)
-            obj.put("overnightCity", td.overnightCity)
-            obj.put("notes", td.notes)
+            obj.put("overnightLocation", td.overnightLocation)
+            obj.put("overnightSundayLocation", td.overnightSundayLocation)
             obj.put("orderIndex", td.orderIndex)
             tripDaysArray.put(obj)
         }
@@ -240,21 +257,20 @@ if (settings != null) {
                 val settingsJson = root.getJSONObject("settings")
                 val brandName = settingsJson.optString("brandName", "MACS CRM")
                 val enableApprovals = settingsJson.optBoolean("enableMeetingApprovals", true)
+                val defaultMapLat = settingsJson.optDouble("defaultMapLat", 52.2297)
+                val defaultMapLng = settingsJson.optDouble("defaultMapLng", 21.0122)
                 val prods = if (settingsJson.has("productsList")) {
-                    val arr = settingsJson.getJSONArray("productsList")
-                    val list = mutableListOf<String>()
-                    for (i in 0 until arr.length()) {
-                        list.add(arr.getString(i))
-                    }
-                    list.joinToString(",")
+                    settingsJson.getStringList("productsList")
                 } else {
-                    "SCANLAN,ALLIUM,BIOSIS,ORASCOPTIC,NEOS SternFix"
+                    listOf("SCANLAN", "ALLIUM", "BIOSIS", "ORASCOPTIC", "NEOS SternFix")
                 }
                 settingsDao.saveSettings(
                     SettingsEntity(
                         id = "system_settings",
                         brandName = brandName,
                         enableMeetingApprovals = enableApprovals,
+                        defaultMapLat = defaultMapLat,
+                        defaultMapLng = defaultMapLng,
                         productsList = prods
                     )
                 )
@@ -273,7 +289,9 @@ if (settings != null) {
                             email = obj.getString("email"),
                             role = obj.getString("role"),
                             isActive = obj.optBoolean("isActive", true),
-                            createdAt = obj.optString("createdAt", "")
+                            createdAt = obj.optString("createdAt", ""),
+                            password = obj.optString("password", ""),
+                            mustChangePassword = obj.optBoolean("mustChangePassword", false)
                         )
                     )
                 }
@@ -290,12 +308,19 @@ if (settings != null) {
                         HospitalEntity(
                             id = obj.getString("id"),
                             name = obj.getString("name"),
-                            city = obj.optString("city", ""),
                             address = obj.optString("address", ""),
-                            postalCode = obj.optString("postalCode", ""),
+                            city = obj.optString("city", ""),
+                            voivodeship = obj.optString("voivodeship", ""),
+                            phone = obj.optString("phone", ""),
+                            email = obj.optString("email", ""),
+                            website = obj.optString("website", ""),
                             pipelineStatus = obj.optString("pipelineStatus", "ACTIVE"),
-                            importanceScore = obj.optInt("importanceScore", 3),
+                            lat = if (obj.has("lat") && !obj.isNull("lat")) obj.getDouble("lat") else null,
+                            lng = if (obj.has("lng") && !obj.isNull("lng")) obj.getDouble("lng") else null,
                             notes = obj.optString("notes", ""),
+                            segment = obj.optString("segment", ""),
+                            postalCode = obj.optString("postalCode", ""),
+                            importanceScore = obj.optInt("importanceScore", 3),
                             createdAt = obj.optString("createdAt", ""),
                             updatedAt = obj.optString("updatedAt", "")
                         )
@@ -315,8 +340,7 @@ if (settings != null) {
                             id = obj.getString("id"),
                             hospitalId = obj.getString("hospitalId"),
                             name = obj.getString("name"),
-                            floor = obj.optString("floor", ""),
-                            notes = obj.optString("notes", ""),
+                            type = obj.optString("type", ""),
                             createdAt = obj.optString("createdAt", "")
                         )
                     )
@@ -333,17 +357,15 @@ if (settings != null) {
                     doctorEntities.add(
                         DoctorEntity(
                             id = obj.getString("id"),
-                            hospitalId = obj.getString("hospitalId"),
-                            departmentId = obj.optString("departmentId", ""),
                             firstName = obj.optString("firstName", ""),
                             lastName = obj.optString("lastName", ""),
-                            academicTitle = obj.optString("academicTitle", "lek. med."),
-                            specialization = obj.optString("specialization", "Chirurgia"),
-                            phoneNumber = obj.optString("phoneNumber", ""),
+                            title = obj.optString("title", "lek. med."),
+                            hospitalId = obj.getString("hospitalId"),
+                            departmentId = obj.optString("departmentId", ""),
+                            phone = obj.optString("phone", ""),
                             email = obj.optString("email", ""),
-                            availabilityNotes = obj.optString("availabilityNotes", ""),
-                            attitude = obj.optString("attitude", "NEUTRAL"),
-                            isKeyContact = obj.optBoolean("isKeyContact", false),
+                            specialization = obj.optString("specialization", "Chirurgia"),
+                            notes = obj.optString("notes", ""),
                             createdAt = obj.optString("createdAt", ""),
                             updatedAt = obj.optString("updatedAt", "")
                         )
@@ -361,20 +383,21 @@ if (settings != null) {
                     meetingEntities.add(
                         MeetingEntity(
                             id = obj.getString("id"),
-                            hospitalId = obj.getString("hospitalId"),
-                            departmentId = obj.optString("departmentId", ""),
-                            doctorId = obj.optString("doctorId", ""),
                             title = obj.getString("title"),
                             meetingDate = obj.getString("meetingDate"),
-                            representativeName = obj.optString("representativeName", "Łukasz W."),
+                            hospitalId = obj.getString("hospitalId"),
+                            departmentId = if (obj.has("departmentId") && !obj.isNull("departmentId")) obj.getString("departmentId") else null,
+                            doctorId = if (obj.has("doctorId") && !obj.isNull("doctorId")) obj.getString("doctorId") else null,
+                            doctorIds = obj.getStringList("doctorIds"),
+                            productTags = obj.getStringList("productTags"),
                             contentMarkdown = obj.optString("contentMarkdown", ""),
-                            productTags = obj.optString("productTags", ""),
-                            followUpPlan = obj.optString("followUpPlan", ""),
+                            meetingType = obj.optString("meetingType", "STANDARD"),
                             closedAt = if (obj.has("closedAt") && !obj.isNull("closedAt")) obj.getString("closedAt") else null,
+                            createdAt = obj.optString("createdAt", ""),
+                            updatedAt = obj.optString("updatedAt", ""),
                             approvalStatus = obj.optString("approvalStatus", "APPROVED"),
                             managerComment = obj.optString("managerComment", ""),
-                            createdAt = obj.optString("createdAt", ""),
-                            updatedAt = obj.optString("updatedAt", "")
+                            representativeName = obj.optString("representativeName", "Łukasz W.")
                         )
                     )
                 }
@@ -415,8 +438,9 @@ if (settings != null) {
                             id = obj.getString("id"),
                             startDate = obj.getString("startDate"),
                             endDate = obj.getString("endDate"),
+                            status = obj.optString("status", "draft"),
                             title = obj.getString("title"),
-                            status = obj.optString("status", "draft")
+                            createdAt = obj.optString("createdAt", "")
                         )
                     )
                 }
@@ -433,8 +457,8 @@ if (settings != null) {
                             id = obj.getString("id"),
                             tripId = obj.getString("tripId"),
                             date = obj.getString("date"),
-                            overnightCity = obj.optString("overnightCity", ""),
-                            notes = obj.optString("notes", ""),
+                            overnightLocation = if (obj.has("overnightLocation") && !obj.isNull("overnightLocation")) obj.getString("overnightLocation") else null,
+                            overnightSundayLocation = if (obj.has("overnightSundayLocation") && !obj.isNull("overnightSundayLocation")) obj.getString("overnightSundayLocation") else null,
                             orderIndex = obj.optInt("orderIndex", 0)
                         )
                     )
@@ -453,7 +477,7 @@ if (settings != null) {
                             tripDayId = obj.getString("tripDayId"),
                             hospitalId = obj.getString("hospitalId"),
                             departmentId = obj.optString("departmentId", ""),
-                            doctorId = obj.optString("doctorId", ""),
+                            doctorId = if (obj.has("doctorId") && !obj.isNull("doctorId")) obj.getString("doctorId") else null,
                             isFixedSlot = obj.optBoolean("isFixedSlot", false),
                             timeSlot = obj.optString("timeSlot", "")
                         )
