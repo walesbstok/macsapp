@@ -47,7 +47,7 @@ class BackupManager(private val database: AppDatabase) {
         meta.put("app", "MACS CRM")
         root.put("metadata", meta)
 
-   // Settings
+    // Settings
 val settings = settingsDao.getSettingsSnapshot()
 if (settings != null) {
     val settingsJson = JSONObject()
@@ -210,9 +210,8 @@ if (settings != null) {
             obj.put("hospitalId", v.hospitalId)
             obj.put("departmentId", v.departmentId)
             obj.put("doctorId", v.doctorId)
-            obj.put("plannedTime", v.plannedTime)
-            obj.put("purpose", v.purpose)
-            obj.put("orderIndex", v.orderIndex)
+            obj.put("isFixedSlot", v.isFixedSlot)
+            obj.put("timeSlot", v.timeSlot)
             visitsArray.put(obj)
         }
         root.put("visits", visitsArray)
@@ -455,9 +454,8 @@ if (settings != null) {
                             hospitalId = obj.getString("hospitalId"),
                             departmentId = obj.optString("departmentId", ""),
                             doctorId = obj.optString("doctorId", ""),
-                            plannedTime = obj.optString("plannedTime", ""),
-                            purpose = obj.optString("purpose", ""),
-                            orderIndex = obj.optInt("orderIndex", 0)
+                            isFixedSlot = obj.optBoolean("isFixedSlot", false),
+                            timeSlot = obj.optString("timeSlot", "")
                         )
                     )
                 }
