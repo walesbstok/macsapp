@@ -531,4 +531,52 @@ class BackupManager(private val database: AppDatabase) {
             )
         }
     }
+
+    suspend fun importFromCsvString(csvString: String, overwriteExisting: Boolean): BackupResult {
+        return try {
+            val bundle = com.example.macscrm.data.local.CsvDataParser.parseCsvString(csvString)
+            if (bundle.hospitals.isEmpty() && bundle.departments.isEmpty() && bundle.doctors.isEmpty()) {
+                return BackupResult(
+                    isSuccess = false,
+                    message = "Nie znaleziono poprawnych rekordów CRM w pliku CSV."
+                )
+            }
+
+            if (overwriteExisting) {
+                hospitalDao.deleteAll()
+                departmentDao.deleteAll()
+                doctorDao.deleteAll()
+                meetingDao.deleteAll()
+                taskDao.deleteAll()
+            }
+
+            if (bundle.hospitals.isNotEmpty()) hospitalDao.insertAll(bundle.hospitals)
+            if (bundle.departments.isNotEmpty()) departmentDao.insertAll(bundle.departments)
+            if (bundle.doctors.isNotEmpty()) doctorDao.insertAll(bundle.doctors)
+            if (bundle.meetings.isNotEmpty()) meetingDao.insertAll(bundle.meetings)
+            if (bundle.tasks.isNotEmpty()) taskDao.insertAll(bundle.tasks)
+
+            val stats = BackupStats(
+                hospitalsCount = bundle.hospitals.size,
+                departmentsCount = bundle.departments.size,
+                doctorsCount = bundle.doctors.size,
+                meetingsCount = bundle.meetings.size,
+                tasksCount = bundle.tasks.size,
+                tripsCount = 0,
+                usersCount = 0,
+                exportDate = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
+            )
+
+            BackupResult(
+                isSuccess = true,
+                message = "Pomyślnie zaimportowano rekordy z pliku CSV.",
+                stats = stats
+            )
+        } catch (e: Exception) {
+            BackupResult(
+                isSuccess = false,
+                message = "Błąd importu pliku CSV: ${e.localizedMessage ?: e.message}"
+            )
+        }
+    }
 }

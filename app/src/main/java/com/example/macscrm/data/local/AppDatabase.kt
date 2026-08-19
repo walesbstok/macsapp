@@ -22,7 +22,7 @@ import kotlinx.coroutines.launch
         UserEntity::class,
         SettingsEntity::class
     ],
-    version = 1,
+    version = 7,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -48,7 +48,8 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "macs_crm_database"
                 )
-                    .addCallback(DatabaseCallback(scope))
+                    .fallbackToDestructiveMigration()
+                    .addCallback(DatabaseCallback(context.applicationContext, scope))
                     .build()
                 INSTANCE = instance
                 instance
@@ -56,33 +57,45 @@ abstract class AppDatabase : RoomDatabase() {
         }
 
         private class DatabaseCallback(
+            private val context: Context,
             private val scope: CoroutineScope
         ) : RoomDatabase.Callback() {
             override fun onCreate(db: SupportSQLiteDatabase) {
                 super.onCreate(db)
                 INSTANCE?.let { database ->
                     scope.launch(Dispatchers.IO) {
-                        populateDatabase(database)
+                        populateDatabase(database, context)
+                    }
+                }
+            }
+
+            override fun onOpen(db: SupportSQLiteDatabase) {
+                super.onOpen(db)
+                INSTANCE?.let { database ->
+                    scope.launch(Dispatchers.IO) {
+                        val currentDocs = database.doctorDao().getAllSnapshot()
+                        if (currentDocs.isEmpty()) {
+                            populateDatabase(database, context)
+                        }
                     }
                 }
             }
         }
 
-        suspend fun populateDatabase(database: AppDatabase) {
+        suspend fun populateDatabase(database: AppDatabase, context: Context? = null) {
             database.hospitalDao().insertAll(SeedDataProvider.getInitialHospitals())
             database.departmentDao().insertAll(SeedDataProvider.getInitialDepartments())
             database.doctorDao().insertAll(SeedDataProvider.getInitialDoctors())
-            database.meetingDao().insertAll(SeedDataProvider.getInitialMeetings())
-            database.taskDao().insertAll(SeedDataProvider.getInitialTasks())
             database.userDao().insertAll(SeedDataProvider.getDefaultUsers())
             database.settingsDao().saveSettings(SeedDataProvider.getDefaultSettings())
-            
-            val trips = SeedDataProvider.getInitialTrips()
-            if (trips.isNotEmpty()) {
-                database.tripDao().insertTrip(trips.first())
-                database.tripDao().insertTripDays(SeedDataProvider.getInitialTripDays())
-                database.tripDao().insertVisits(SeedDataProvider.getInitialVisits())
-            }
+        }
+
+        suspend fun clearAllCrmData(database: AppDatabase) {
+            database.hospitalDao().deleteAll()
+            database.departmentDao().deleteAll()
+            database.doctorDao().deleteAll()
+            database.meetingDao().deleteAll()
+            database.taskDao().deleteAll()
         }
     }
 }
