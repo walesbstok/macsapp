@@ -343,7 +343,18 @@ data class UserEntity(
     val isActive: Boolean,
     val createdAt: String,
     val password: String,
-    val mustChangePassword: Boolean
+    val mustChangePassword: Boolean,
+    val phone: String = "+48 600 123 456",
+    val photoUri: String = "",
+    val territory: String = "Region Mazowiecki / Podlaski",
+    val specializationLine: String = "Chirurgia, Kardiochirurgia & Neurochirurgia",
+    val monthlyVisitTarget: Int = 40,
+    val vehiclePlate: String = "WI 7890A",
+    val notificationsEnabled: Boolean = true,
+    val reminderMinutesBefore: Int = 30,
+    val dailyMorningPlanReminder: Boolean = true,
+    val defaultNavigationApp: String = "Google Maps",
+    val reportTemplateSignature: String = "Z poważaniem,\nPrzedstawiciel Medyczny MACS"
 ) {
     fun toDomain(): CrmUser = CrmUser(
         id = id,
@@ -353,7 +364,18 @@ data class UserEntity(
         isActive = isActive,
         createdAt = createdAt,
         password = password,
-        mustChangePassword = mustChangePassword
+        mustChangePassword = mustChangePassword,
+        phone = phone,
+        photoUri = photoUri,
+        territory = territory,
+        specializationLine = specializationLine,
+        monthlyVisitTarget = monthlyVisitTarget,
+        vehiclePlate = vehiclePlate,
+        notificationsEnabled = notificationsEnabled,
+        reminderMinutesBefore = reminderMinutesBefore,
+        dailyMorningPlanReminder = dailyMorningPlanReminder,
+        defaultNavigationApp = defaultNavigationApp,
+        reportTemplateSignature = reportTemplateSignature
     )
 
     companion object {
@@ -365,7 +387,18 @@ data class UserEntity(
             isActive = u.isActive,
             createdAt = u.createdAt,
             password = u.password,
-            mustChangePassword = u.mustChangePassword
+            mustChangePassword = u.mustChangePassword,
+            phone = u.phone,
+            photoUri = u.photoUri,
+            territory = u.territory,
+            specializationLine = u.specializationLine,
+            monthlyVisitTarget = u.monthlyVisitTarget,
+            vehiclePlate = u.vehiclePlate,
+            notificationsEnabled = u.notificationsEnabled,
+            reminderMinutesBefore = u.reminderMinutesBefore,
+            dailyMorningPlanReminder = u.dailyMorningPlanReminder,
+            defaultNavigationApp = u.defaultNavigationApp,
+            reportTemplateSignature = u.reportTemplateSignature
         )
     }
 }

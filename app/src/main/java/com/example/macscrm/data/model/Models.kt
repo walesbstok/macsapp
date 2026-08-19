@@ -114,7 +114,18 @@ data class CrmUser(
     val isActive: Boolean = true,
     val createdAt: String = "",
     val password: String = "Macs123",
-    val mustChangePassword: Boolean = false
+    val mustChangePassword: Boolean = false,
+    val phone: String = "+48 600 123 456",
+    val photoUri: String = "",
+    val territory: String = "Region Mazowiecki / Podlaski",
+    val specializationLine: String = "Chirurgia, Kardiochirurgia & Neurochirurgia",
+    val monthlyVisitTarget: Int = 40,
+    val vehiclePlate: String = "WI 7890A",
+    val notificationsEnabled: Boolean = true,
+    val reminderMinutesBefore: Int = 30,
+    val dailyMorningPlanReminder: Boolean = true,
+    val defaultNavigationApp: String = "Google Maps",
+    val reportTemplateSignature: String = "Z poważaniem,\nPrzedstawiciel Medyczny MACS"
 )
 
 data class SystemSettings(

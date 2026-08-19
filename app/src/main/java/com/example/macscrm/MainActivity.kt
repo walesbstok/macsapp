@@ -17,6 +17,8 @@ import com.example.macscrm.ui.components.CrmTopAppBar
 import com.example.macscrm.ui.screens.*
 import com.example.macscrm.ui.theme.MacsCRMTheme
 import com.example.macscrm.ui.viewmodel.CrmViewModel
+import com.example.macscrm.util.CrmNotificationManager
+import com.example.macscrm.widget.CrmAppWidgetProvider
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -27,6 +29,15 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        // Create notification channels
+        CrmNotificationManager.createNotificationChannels(this)
+
+        // Handle target screen from Intent if opened via notification or widget
+        val targetScreen = intent?.getStringExtra("EXTRA_TARGET_SCREEN")
+        if (!targetScreen.isNullOrBlank()) {
+            viewModel.navigateTo(targetScreen)
+        }
+
         setContent {
             MacsCRMTheme {
                 val currentScreen by viewModel.currentScreen.collectAsState()
@@ -34,6 +45,34 @@ class MainActivity : ComponentActivity() {
                 val currentRole by viewModel.currentRole.collectAsState()
                 val systemSettings by viewModel.systemSettings.collectAsState()
                 val selectedMeetingId by viewModel.selectedMeetingId.collectAsState()
+                val meetings by viewModel.meetings.collectAsState()
+                val tasks by viewModel.tasks.collectAsState()
+                val doctors by viewModel.doctors.collectAsState()
+                val hospitals by viewModel.hospitals.collectAsState()
+
+                // Sync data with widget
+                LaunchedEffect(meetings, tasks, doctors, hospitals) {
+                    val upcomingMeeting = meetings.firstOrNull { !it.isClosed }
+                    val doctorName = if (upcomingMeeting?.doctorId != null) {
+                        doctors.find { it.id == upcomingMeeting.doctorId }?.fullName ?: "Wizyta handlowa"
+                    } else "Planowane spotkanie"
+                    val hospitalName = if (upcomingMeeting != null) {
+                        hospitals.find { it.id == upcomingMeeting.hospitalId }?.let { "${it.name}, ${it.city}" } ?: "Szpital"
+                    } else "Brak zaplanowanych wizyt"
+                    val meetingTime = upcomingMeeting?.meetingDate?.takeLast(5) ?: "09:00"
+                    val urgentTasks = tasks.count { !it.isDone }
+                    val closedToday = meetings.count { it.isClosed }
+                    val totalToday = meetings.size
+
+                    CrmAppWidgetProvider.setWidgetData(
+                        doctorName = doctorName,
+                        hospitalName = hospitalName,
+                        meetingTime = meetingTime,
+                        statsText = "Wizyty: $closedToday/$totalToday zrealizowane",
+                        tasksCount = urgentTasks
+                    )
+                    CrmAppWidgetProvider.updateAllWidgets(this@MainActivity)
+                }
 
                 val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
                 val scope = rememberCoroutineScope()
@@ -77,6 +116,7 @@ class MainActivity : ComponentActivity() {
                                 if (currentScreen != "meeting_detail") {
                                     val title = when (currentScreen) {
                                         "dashboard" -> "Pulpit Główny"
+                                        "profile" -> "Profil Przedstawiciela"
                                         "contacts" -> "Szpitale i Kontakty"
                                         "meetings" -> "Wizyty i Raporty"
                                         "calendar" -> "Kalendarz Wizyt"
@@ -92,7 +132,7 @@ class MainActivity : ComponentActivity() {
                                         currentRole = currentRole,
                                         onMenuClick = { scope.launch { drawerState.open() } },
                                         onRoleChange = { role -> viewModel.setRole(role) },
-                                        onProfileClick = { scope.launch { drawerState.open() } }
+                                        onProfileClick = { viewModel.navigateTo("profile") }
                                     )
                                 }
                             },
@@ -115,6 +155,10 @@ class MainActivity : ComponentActivity() {
                                     "dashboard" -> DashboardScreen(
                                         viewModel = viewModel,
                                         onNavigate = { screen, meetingId -> viewModel.navigateTo(screen, meetingId) }
+                                    )
+                                    "profile" -> ProfileScreen(
+                                        viewModel = viewModel,
+                                        onBack = { viewModel.navigateTo("dashboard") }
                                     )
                                     "contacts" -> ContactsScreen(
                                         viewModel = viewModel,
@@ -145,7 +189,7 @@ class MainActivity : ComponentActivity() {
                                     "tasks" -> TasksScreen(viewModel = viewModel)
                                     "trips" -> TripsScreen(
                                         viewModel = viewModel,
-                                        onNavigateToHospital = { /* no-op or filter */ }
+                                        onNavigateToHospital = { /* no-op */ }
                                     )
                                     "manager" -> ManagerScreen(
                                         viewModel = viewModel,

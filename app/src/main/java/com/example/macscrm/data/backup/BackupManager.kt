@@ -81,6 +81,17 @@ class BackupManager(private val database: AppDatabase) {
             obj.put("createdAt", u.createdAt)
             obj.put("password", u.password)
             obj.put("mustChangePassword", u.mustChangePassword)
+            obj.put("phone", u.phone)
+            obj.put("photoUri", u.photoUri)
+            obj.put("territory", u.territory)
+            obj.put("specializationLine", u.specializationLine)
+            obj.put("monthlyVisitTarget", u.monthlyVisitTarget)
+            obj.put("vehiclePlate", u.vehiclePlate)
+            obj.put("notificationsEnabled", u.notificationsEnabled)
+            obj.put("reminderMinutesBefore", u.reminderMinutesBefore)
+            obj.put("dailyMorningPlanReminder", u.dailyMorningPlanReminder)
+            obj.put("defaultNavigationApp", u.defaultNavigationApp)
+            obj.put("reportTemplateSignature", u.reportTemplateSignature)
             usersArray.put(obj)
         }
         root.put("users", usersArray)
@@ -291,7 +302,18 @@ class BackupManager(private val database: AppDatabase) {
                             isActive = obj.optBoolean("isActive", true),
                             createdAt = obj.optString("createdAt", ""),
                             password = obj.optString("password", ""),
-                            mustChangePassword = obj.optBoolean("mustChangePassword", false)
+                            mustChangePassword = obj.optBoolean("mustChangePassword", false),
+                            phone = obj.optString("phone", "+48 600 123 456"),
+                            photoUri = obj.optString("photoUri", ""),
+                            territory = obj.optString("territory", "Region Mazowiecki / Podlaski"),
+                            specializationLine = obj.optString("specializationLine", "Chirurgia, Kardiochirurgia & Neurochirurgia"),
+                            monthlyVisitTarget = obj.optInt("monthlyVisitTarget", 40),
+                            vehiclePlate = obj.optString("vehiclePlate", "WI 7890A"),
+                            notificationsEnabled = obj.optBoolean("notificationsEnabled", true),
+                            reminderMinutesBefore = obj.optInt("reminderMinutesBefore", 30),
+                            dailyMorningPlanReminder = obj.optBoolean("dailyMorningPlanReminder", true),
+                            defaultNavigationApp = obj.optString("defaultNavigationApp", "Google Maps"),
+                            reportTemplateSignature = obj.optString("reportTemplateSignature", "Z poważaniem,\nPrzedstawiciel Medyczny MACS")
                         )
                     )
                 }

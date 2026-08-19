@@ -44,6 +44,7 @@ fun AdminScreen(
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
 
+    val currentRole by viewModel.currentRole.collectAsState()
     val systemSettings by viewModel.systemSettings.collectAsState()
     val users by viewModel.users.collectAsState()
     val hospitals by viewModel.hospitals.collectAsState()
@@ -115,27 +116,48 @@ fun AdminScreen(
         // Admin Header
         item {
             Card(
-                colors = CardDefaults.cardColors(containerColor = OceanBlueDark),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (currentRole == UserRole.ADMIN) OceanBlueDark else StatusWarningBg
+                ),
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.AdminPanelSettings, contentDescription = null, tint = Color.White, modifier = Modifier.size(28.dp))
+                        Icon(
+                            Icons.Default.AdminPanelSettings,
+                            contentDescription = null,
+                            tint = if (currentRole == UserRole.ADMIN) Color.White else StatusWarning,
+                            modifier = Modifier.size(28.dp)
+                        )
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
-                            text = "Panel Administracyjny",
+                            text = "Panel Administracyjny (Tylko Administrator)",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = if (currentRole == UserRole.ADMIN) Color.White else StatusWarning
                         )
                     }
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Zarządzanie konfiguracją systemu, eksportem/importem bazy, słownikami i użytkownikami.",
+                        text = if (currentRole == UserRole.ADMIN) {
+                            "Zarządzanie konfiguracją systemu, importem i eksportem całej bazy w jednym pliku JSON, słownikami i użytkownikami."
+                        } else {
+                            "Uwaga: Jesteś zalogowany jako ${currentRole.label}. Pełny import/eksport bazy oraz edycja parametrów systemowych są zarezerwowane dla Administratora."
+                        },
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.85f)
+                        color = if (currentRole == UserRole.ADMIN) Color.White.copy(alpha = 0.85f) else SlateTextPrimary
                     )
+                    if (currentRole != UserRole.ADMIN) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
+                            onClick = { viewModel.setRole(UserRole.ADMIN) },
+                            colors = ButtonDefaults.buttonColors(containerColor = OceanBlue),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("Przełącz na profil Administratora")
+                        }
+                    }
                 }
             }
         }

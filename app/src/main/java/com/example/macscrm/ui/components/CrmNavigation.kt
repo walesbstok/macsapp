@@ -33,6 +33,7 @@ data class NavItem(
 
 val NAV_ITEMS = listOf(
     NavItem("dashboard", "Pulpit", Icons.Default.Dashboard),
+    NavItem("profile", "Mój Profil", Icons.Default.AccountCircle),
     NavItem("contacts", "Kontakty", Icons.Default.People),
     NavItem("meetings", "Wizyty", Icons.Default.EventNote),
     NavItem("calendar", "Kalendarz", Icons.Default.CalendarMonth),
