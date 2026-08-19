@@ -28,3 +28,5 @@ val DarkSurface = Color(0xFF1C2541)
 val DarkCard = Color(0xFF243054)
 val DarkTextPrimary = Color(0xFFF8FAFC)
 val DarkTextSecondary = Color(0xFF94A3B8)
+
+val EmeraldGreen = Color(0xFF10B981)
