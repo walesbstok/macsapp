@@ -96,3 +96,11 @@ enum class ApprovalStatus(val label: String) {
         }
     }
 }
+
+enum class QuickAddTarget {
+    MEETING,
+    DOCTOR,
+    HOSPITAL,
+    DEPARTMENT,
+    TASK
+}

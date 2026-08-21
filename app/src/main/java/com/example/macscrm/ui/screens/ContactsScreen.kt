@@ -20,6 +20,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -58,6 +59,32 @@ fun ContactsScreen(
     var selectedDoctorDetail by remember { mutableStateOf<Doctor?>(null) }
 
     var itemToDelete by remember { mutableStateOf<Triple<String, String, () -> Unit>?>(null) }
+
+    val quickAddTrigger by viewModel.quickAddTrigger.collectAsState()
+
+    LaunchedEffect(quickAddTrigger) {
+        when (quickAddTrigger) {
+            QuickAddTarget.HOSPITAL -> {
+                selectedTab = 0
+                editingHospital = null
+                showAddHospitalDialog = true
+                viewModel.clearQuickAddTrigger()
+            }
+            QuickAddTarget.DOCTOR -> {
+                selectedTab = 2
+                editingDoctor = null
+                showAddDoctorDialog = true
+                viewModel.clearQuickAddTrigger()
+            }
+            QuickAddTarget.DEPARTMENT -> {
+                selectedTab = 1
+                editingDepartment = null
+                showAddDepartmentDialog = true
+                viewModel.clearQuickAddTrigger()
+            }
+            else -> {}
+        }
+    }
 
     Scaffold(
         floatingActionButton = {
@@ -669,13 +696,20 @@ fun ContactsScreen(
         var selectedHospId by remember { mutableStateOf(editingDoctor?.hospitalId ?: hospitals.firstOrNull()?.id ?: "") }
         var selectedDeptId by remember { mutableStateOf(editingDoctor?.departmentId ?: "") }
 
+        var hospitalExpanded by remember { mutableStateOf(false) }
+        var departmentExpanded by remember { mutableStateOf(false) }
+
+        val currentHosp = hospitals.find { it.id == selectedHospId }
+        val availableDepts = departments.filter { it.hospitalId == selectedHospId }
+        val currentDept = availableDepts.find { it.id == selectedDeptId }
+
         AlertDialog(
             onDismissRequest = { showAddDoctorDialog = false },
             title = { Text(if (editingDoctor == null) "Dodaj Lekarza" else "Edytuj Lekarza") },
             text = {
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.fillMaxWidth().heightIn(max = 450.dp)
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 480.dp)
                 ) {
                     item {
                         OutlinedTextField(
@@ -709,6 +743,94 @@ fun ContactsScreen(
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
+
+                    // Przypisanie do Szpitala
+                    item {
+                        ExposedDropdownMenuBox(
+                            expanded = hospitalExpanded,
+                            onExpandedChange = { hospitalExpanded = !hospitalExpanded },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            OutlinedTextField(
+                                value = currentHosp?.name ?: if (hospitals.isEmpty()) "Brak szpitali" else "Wybierz szpital *",
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("Szpital *") },
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = hospitalExpanded) },
+                                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                                modifier = Modifier
+                                    .menuAnchor()
+                                    .fillMaxWidth()
+                            )
+                            ExposedDropdownMenu(
+                                expanded = hospitalExpanded,
+                                onDismissRequest = { hospitalExpanded = false }
+                            ) {
+                                hospitals.forEach { hosp ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Column {
+                                                Text(hosp.name, fontWeight = FontWeight.Medium)
+                                                if (hosp.city.isNotBlank()) {
+                                                    Text(hosp.city, style = MaterialTheme.typography.bodySmall, color = Color(0xFF64748B))
+                                                }
+                                            }
+                                        },
+                                        onClick = {
+                                            selectedHospId = hosp.id
+                                            selectedDeptId = ""
+                                            hospitalExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Przypisanie do Oddziału
+                    item {
+                        ExposedDropdownMenuBox(
+                            expanded = departmentExpanded,
+                            onExpandedChange = { departmentExpanded = !departmentExpanded },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            OutlinedTextField(
+                                value = currentDept?.name ?: if (availableDepts.isEmpty()) "Brak oddziałów (lub wybór ogólny)" else "Wybierz oddział (opcjonalnie)",
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("Oddział") },
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = departmentExpanded) },
+                                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                                modifier = Modifier
+                                    .menuAnchor()
+                                    .fillMaxWidth()
+                            )
+                            if (availableDepts.isNotEmpty()) {
+                                ExposedDropdownMenu(
+                                    expanded = departmentExpanded,
+                                    onDismissRequest = { departmentExpanded = false }
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("— Brak przypisanego oddziału —", fontStyle = FontStyle.Italic) },
+                                        onClick = {
+                                            selectedDeptId = ""
+                                            departmentExpanded = false
+                                        }
+                                    )
+                                    availableDepts.forEach { dept ->
+                                        DropdownMenuItem(
+                                            text = { Text(dept.name) },
+                                            onClick = {
+                                                selectedDeptId = dept.id
+                                                departmentExpanded = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     item {
                         OutlinedTextField(
                             value = phone,

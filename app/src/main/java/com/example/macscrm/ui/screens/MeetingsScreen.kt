@@ -47,6 +47,16 @@ fun MeetingsScreen(
     var editingMeeting by remember { mutableStateOf<Meeting?>(null) }
     var meetingToDelete by remember { mutableStateOf<Meeting?>(null) }
 
+    val quickAddTrigger by viewModel.quickAddTrigger.collectAsState()
+
+    LaunchedEffect(quickAddTrigger) {
+        if (quickAddTrigger == QuickAddTarget.MEETING) {
+            editingMeeting = null
+            showAddMeetingDialog = true
+            viewModel.clearQuickAddTrigger()
+        }
+    }
+
     val plannedMeetings = meetings.filter { !it.isClosed }
     val pastMeetings = meetings.filter { it.isClosed }
 

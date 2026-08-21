@@ -43,6 +43,25 @@ class CrmViewModel(application: Application) : AndroidViewModel(application) {
     private val _selectedMeetingId = MutableStateFlow<String?>(null)
     val selectedMeetingId: StateFlow<String?> = _selectedMeetingId.asStateFlow()
 
+    // Quick Add Action Trigger
+    private val _quickAddTrigger = MutableStateFlow<QuickAddTarget?>(null)
+    val quickAddTrigger: StateFlow<QuickAddTarget?> = _quickAddTrigger.asStateFlow()
+
+    fun triggerQuickAdd(target: QuickAddTarget) {
+        _quickAddTrigger.value = target
+        when (target) {
+            QuickAddTarget.MEETING -> _currentScreen.value = "meetings"
+            QuickAddTarget.DOCTOR -> _currentScreen.value = "contacts"
+            QuickAddTarget.HOSPITAL -> _currentScreen.value = "contacts"
+            QuickAddTarget.DEPARTMENT -> _currentScreen.value = "contacts"
+            QuickAddTarget.TASK -> _currentScreen.value = "tasks"
+        }
+    }
+
+    fun clearQuickAddTrigger() {
+        _quickAddTrigger.value = null
+    }
+
     // Data streams from repository
     val hospitals: StateFlow<List<Hospital>> = repository.allHospitals
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -303,6 +322,13 @@ class CrmViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val json = repository.exportDatabaseToJson()
             onComplete(json)
+        }
+    }
+
+    fun exportDatabaseCsv(onComplete: (String) -> Unit) {
+        viewModelScope.launch {
+            val csv = repository.exportDatabaseToCsv()
+            onComplete(csv)
         }
     }
 

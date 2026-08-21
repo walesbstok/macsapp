@@ -160,6 +160,10 @@ class CrmRepository(private val database: AppDatabase) {
         return backupManager.createBackupJson()
     }
 
+    suspend fun exportDatabaseToCsv(): String {
+        return backupManager.createExportCsv()
+    }
+
     suspend fun importDatabaseFromJson(jsonString: String, overwriteExisting: Boolean): com.example.macscrm.data.backup.BackupResult {
         return backupManager.restoreFromJson(jsonString, overwriteExisting)
     }

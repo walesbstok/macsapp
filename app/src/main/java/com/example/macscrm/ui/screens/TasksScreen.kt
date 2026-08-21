@@ -16,7 +16,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-import com.example.macscrm.data.model.Task
+import com.example.macscrm.data.model.*
 import com.example.macscrm.ui.components.SearchBar
 import com.example.macscrm.ui.theme.*
 import com.example.macscrm.ui.viewmodel.CrmViewModel
@@ -38,6 +38,16 @@ fun TasksScreen(
     var showAddTaskDialog by remember { mutableStateOf(false) }
     var editingTask by remember { mutableStateOf<Task?>(null) }
     var taskToDelete by remember { mutableStateOf<Task?>(null) }
+
+    val quickAddTrigger by viewModel.quickAddTrigger.collectAsState()
+
+    LaunchedEffect(quickAddTrigger) {
+        if (quickAddTrigger == QuickAddTarget.TASK) {
+            editingTask = null
+            showAddTaskDialog = true
+            viewModel.clearQuickAddTrigger()
+        }
+    }
 
     val filteredTasks = tasks.filter { task ->
         val matchesFilter = when (selectedFilter) {

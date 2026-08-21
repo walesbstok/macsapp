@@ -76,6 +76,12 @@ abstract class AppDatabase : RoomDatabase() {
                         val currentDocs = database.doctorDao().getAllSnapshot()
                         if (currentDocs.isEmpty()) {
                             populateDatabase(database, context)
+                        } else {
+                            val currentMeetings = database.meetingDao().getAllSnapshot()
+                            if (currentMeetings.isEmpty()) {
+                                database.meetingDao().insertAll(SeedDataProvider.getInitialMeetings())
+                                database.taskDao().insertAll(SeedDataProvider.getInitialTasks())
+                            }
                         }
                     }
                 }
@@ -86,6 +92,8 @@ abstract class AppDatabase : RoomDatabase() {
             database.hospitalDao().insertAll(SeedDataProvider.getInitialHospitals())
             database.departmentDao().insertAll(SeedDataProvider.getInitialDepartments())
             database.doctorDao().insertAll(SeedDataProvider.getInitialDoctors())
+            database.meetingDao().insertAll(SeedDataProvider.getInitialMeetings())
+            database.taskDao().insertAll(SeedDataProvider.getInitialTasks())
             database.userDao().insertAll(SeedDataProvider.getDefaultUsers())
             database.settingsDao().saveSettings(SeedDataProvider.getDefaultSettings())
         }

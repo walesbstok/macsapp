@@ -247,6 +247,126 @@ class BackupManager(private val database: AppDatabase) {
         return root.toString(2)
     }
 
+    suspend fun createExportCsv(): String {
+        val sb = StringBuilder()
+        // UTF-8 BOM for Excel
+        sb.append("\uFEFF")
+        sb.append("TYP_REKORDU;ID;NAZWA_TYTUL;SZPITAL_MIASTO;ODDZIAL;LEKARZ_PERSONEL;DATA_TERMIN;STATUS_SEGMENT;PRODUKTY_TAGI;NOTATKI_TRESC;KOMENTARZ_MANAGERA\n")
+
+        val hospitals = hospitalDao.getAllSnapshot()
+        val departments = departmentDao.getAllSnapshot()
+        val doctors = doctorDao.getAllSnapshot()
+        val meetings = meetingDao.getAllSnapshot()
+        val tasks = taskDao.getAllSnapshot()
+        val trips = tripDao.getAllTripsSnapshot()
+
+        // Helper to sanitize CSV field
+        fun sanitize(value: String?): String {
+            if (value == null) return ""
+            return value.replace(";", ",").replace("\n", " ").replace("\r", " ").replace("\"", "'").trim()
+        }
+
+        // 1. Szpitale
+        hospitals.forEach { h ->
+            sb.append("SZPITAL;")
+            sb.append("${sanitize(h.id)};")
+            sb.append("${sanitize(h.name)};")
+            sb.append("${sanitize("${h.city}, ${h.voivodeship}")};")
+            sb.append("${sanitize(h.address)};")
+            sb.append(";")
+            sb.append(";")
+            sb.append("${sanitize("Segment ${h.segment} / ${h.pipelineStatus}")};")
+            sb.append(";")
+            sb.append("${sanitize(h.notes)};")
+            sb.append("\n")
+        }
+
+        // 2. Oddziały
+        departments.forEach { d ->
+            val hosp = hospitals.find { it.id == d.hospitalId }
+            sb.append("ODDZIAŁ;")
+            sb.append("${sanitize(d.id)};")
+            sb.append("${sanitize(d.name)};")
+            sb.append("${sanitize(hosp?.name ?: "")};")
+            sb.append("${sanitize(d.type)};")
+            sb.append(";")
+            sb.append(";")
+            sb.append(";")
+            sb.append(";")
+            sb.append(";")
+            sb.append("\n")
+        }
+
+        // 3. Lekarze
+        doctors.forEach { doc ->
+            val hosp = hospitals.find { it.id == doc.hospitalId }
+            val dept = departments.find { it.id == doc.departmentId }
+            sb.append("LEKARZ;")
+            sb.append("${sanitize(doc.id)};")
+            sb.append("${sanitize("${doc.title} ${doc.firstName} ${doc.lastName}")};")
+            sb.append("${sanitize(hosp?.name ?: "")};")
+            sb.append("${sanitize(dept?.name ?: "")};")
+            sb.append("${sanitize(doc.specialization)};")
+            sb.append(";")
+            sb.append("${sanitize("${doc.phone} / ${doc.email}")};")
+            sb.append(";")
+            sb.append("${sanitize(doc.notes)};")
+            sb.append("\n")
+        }
+
+        // 4. Wizyty / Spotkania
+        meetings.forEach { m ->
+            val hosp = hospitals.find { it.id == m.hospitalId }
+            val dept = departments.find { it.id == m.departmentId }
+            val doc = doctors.find { it.id == m.doctorId }
+            sb.append("WIZYTA / SPOTKANIE;")
+            sb.append("${sanitize(m.id)};")
+            sb.append("${sanitize(m.title)};")
+            sb.append("${sanitize(hosp?.name ?: "")};")
+            sb.append("${sanitize(dept?.name ?: "")};")
+            sb.append("${sanitize(doc?.let { "${it.title} ${it.firstName} ${it.lastName}" } ?: m.representativeName)};")
+            sb.append("${sanitize(m.meetingDate)};")
+            sb.append("${sanitize("${m.meetingType} / ${m.approvalStatus}")};")
+            sb.append("${sanitize(m.productTags.joinToString(", "))};")
+            sb.append("${sanitize(m.contentMarkdown)};")
+            sb.append("${sanitize(m.managerComment)}\n")
+        }
+
+        // 5. Follow-upy / Zadania
+        tasks.forEach { t ->
+            val hosp = hospitals.find { it.id == t.hospitalId }
+            val doc = doctors.find { it.id == t.doctorId }
+            sb.append("FOLLOW-UP / ZADANIE;")
+            sb.append("${sanitize(t.id)};")
+            sb.append("${sanitize(t.description)};")
+            sb.append("${sanitize(hosp?.name ?: "")};")
+            sb.append(";")
+            sb.append("${sanitize(doc?.let { "${it.firstName} ${it.lastName}" } ?: "")};")
+            sb.append("${sanitize(t.dueDate)};")
+            sb.append("${if (t.isDone) "ZREALIZOWANE" else "DO_ZROBIENIA"};")
+            sb.append(";")
+            sb.append(";")
+            sb.append("\n")
+        }
+
+        // 6. Trasy
+        trips.forEach { tr ->
+            sb.append("TRASA;")
+            sb.append("${sanitize(tr.id)};")
+            sb.append("${sanitize(tr.title)};")
+            sb.append(";")
+            sb.append(";")
+            sb.append(";")
+            sb.append("${sanitize("${tr.startDate} - ${tr.endDate}")};")
+            sb.append("${sanitize(tr.status)};")
+            sb.append(";")
+            sb.append(";")
+            sb.append("\n")
+        }
+
+        return sb.toString()
+    }
+
     suspend fun restoreFromJson(jsonString: String, overwriteExisting: Boolean): BackupResult {
         return try {
             val root = JSONObject(jsonString)

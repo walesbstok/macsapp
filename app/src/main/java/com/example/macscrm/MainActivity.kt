@@ -11,9 +11,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import com.example.macscrm.data.model.*
 import com.example.macscrm.ui.components.CrmBottomNavigation
-import com.example.macscrm.ui.components.CrmNavigationDrawerContent
 import com.example.macscrm.ui.components.CrmTopAppBar
+import com.example.macscrm.ui.components.MoreNavigationModal
+import com.example.macscrm.ui.components.QuickAddModal
 import com.example.macscrm.ui.screens.*
 import com.example.macscrm.ui.theme.MacsCRMTheme
 import com.example.macscrm.ui.viewmodel.CrmViewModel
@@ -74,8 +76,9 @@ class MainActivity : ComponentActivity() {
                     CrmAppWidgetProvider.updateAllWidgets(this@MainActivity)
                 }
 
-                val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-                val scope = rememberCoroutineScope()
+                var showMoreModal by remember { mutableStateOf(false) }
+                var showQuickAddModal by remember { mutableStateOf(false) }
+                var showResetDbConfirm by remember { mutableStateOf(false) }
 
                 // Back press handling
                 BackHandler(enabled = currentScreen != "dashboard" && currentScreen != "login") {
@@ -92,117 +95,145 @@ class MainActivity : ComponentActivity() {
                         onLoginSuccess = { viewModel.navigateTo("dashboard") }
                     )
                 } else {
-                    ModalNavigationDrawer(
-                        drawerState = drawerState,
-                        drawerContent = {
-                            CrmNavigationDrawerContent(
-                                currentScreen = currentScreen,
-                                currentRole = currentRole,
-                                currentUser = currentUser,
-                                brandName = systemSettings.brandName,
-                                onNavigate = { screen ->
-                                    viewModel.navigateTo(screen)
-                                    scope.launch { drawerState.close() }
-                                },
-                                onLogout = {
-                                    viewModel.logout()
-                                    scope.launch { drawerState.close() }
-                                }
-                            )
+                    Scaffold(
+                        topBar = {
+                            if (currentScreen != "meeting_detail") {
+                                CrmTopAppBar(
+                                    currentUser = currentUser,
+                                    currentRole = currentRole,
+                                    onSettingsClick = { viewModel.navigateTo("admin") },
+                                    onLogoutClick = { viewModel.logout() }
+                                )
+                            }
+                        },
+                        bottomBar = {
+                            if (currentScreen != "meeting_detail" && currentScreen != "login") {
+                                CrmBottomNavigation(
+                                    currentScreen = currentScreen,
+                                    onNavigate = { screen -> viewModel.navigateTo(screen) },
+                                    onAddClick = { showQuickAddModal = true },
+                                    onMoreClick = { showMoreModal = true }
+                                )
+                            }
                         }
-                    ) {
-                        Scaffold(
-                            topBar = {
-                                if (currentScreen != "meeting_detail") {
-                                    val title = when (currentScreen) {
-                                        "dashboard" -> "Pulpit Główny"
-                                        "profile" -> "Profil Przedstawiciela"
-                                        "contacts" -> "Szpitale i Kontakty"
-                                        "meetings" -> "Wizyty i Raporty"
-                                        "calendar" -> "Kalendarz Wizyt"
-                                        "tasks" -> "Zadania Handlowe"
-                                        "trips" -> "Planer Tras"
-                                        "manager" -> "Panel Managera"
-                                        "admin" -> "Panel Administratora"
-                                        else -> systemSettings.brandName
+                    ) { innerPadding ->
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(innerPadding),
+                            color = MaterialTheme.colorScheme.background
+                        ) {
+                            when (currentScreen) {
+                                "dashboard" -> DashboardScreen(
+                                    viewModel = viewModel,
+                                    onNavigate = { screen, meetingId -> viewModel.navigateTo(screen, meetingId) }
+                                )
+                                "profile" -> ProfileScreen(
+                                    viewModel = viewModel,
+                                    onBack = { viewModel.navigateTo("dashboard") }
+                                )
+                                "contacts" -> ContactsScreen(
+                                    viewModel = viewModel,
+                                    onNavigateToMeeting = { meetingId -> viewModel.navigateTo("meeting_detail", meetingId) }
+                                )
+                                "meetings" -> MeetingsScreen(
+                                    viewModel = viewModel,
+                                    onNavigateToDetail = { meetingId -> viewModel.navigateTo("meeting_detail", meetingId) }
+                                )
+                                "meeting_detail" -> {
+                                    if (selectedMeetingId != null) {
+                                        MeetingDetailScreen(
+                                            meetingId = selectedMeetingId!!,
+                                            viewModel = viewModel,
+                                            onBack = { viewModel.navigateTo("meetings") }
+                                        )
+                                    } else {
+                                        MeetingsScreen(
+                                            viewModel = viewModel,
+                                            onNavigateToDetail = { meetingId -> viewModel.navigateTo("meeting_detail", meetingId) }
+                                        )
                                     }
-                                    CrmTopAppBar(
-                                        title = title,
-                                        currentUser = currentUser,
-                                        currentRole = currentRole,
-                                        onMenuClick = { scope.launch { drawerState.open() } },
-                                        onRoleChange = { role -> viewModel.setRole(role) },
-                                        onProfileClick = { viewModel.navigateTo("profile") }
-                                    )
+                                }
+                                "calendar" -> CalendarScreen(
+                                    viewModel = viewModel,
+                                    onNavigateToMeeting = { meetingId -> viewModel.navigateTo("meeting_detail", meetingId) }
+                                )
+                                "tasks" -> TasksScreen(viewModel = viewModel)
+                                "trips" -> TripsScreen(
+                                    viewModel = viewModel,
+                                    onNavigateToHospital = { /* no-op */ }
+                                )
+                                "manager" -> ManagerScreen(
+                                    viewModel = viewModel,
+                                    onNavigateToMeeting = { meetingId -> viewModel.navigateTo("meeting_detail", meetingId) }
+                                )
+                                "admin" -> AdminScreen(viewModel = viewModel)
+                                else -> DashboardScreen(
+                                    viewModel = viewModel,
+                                    onNavigate = { screen, meetingId -> viewModel.navigateTo(screen, meetingId) }
+                                )
+                            }
+                        }
+                    }
+
+                    // More Modal
+                    if (showMoreModal) {
+                        MoreNavigationModal(
+                            currentRole = currentRole,
+                            currentUser = currentUser,
+                            onDismiss = { showMoreModal = false },
+                            onNavigate = { screen: String -> viewModel.navigateTo(screen) },
+                            onLogout = { viewModel.logout() },
+                            onResetDatabase = { showResetDbConfirm = true }
+                        )
+                    }
+
+                    // Quick Add Modal
+                    if (showQuickAddModal) {
+                        QuickAddModal(
+                            onDismiss = { showQuickAddModal = false },
+                            onAddMeeting = {
+                                showQuickAddModal = false
+                                viewModel.triggerQuickAdd(QuickAddTarget.MEETING)
+                            },
+                            onAddDoctor = {
+                                showQuickAddModal = false
+                                viewModel.triggerQuickAdd(QuickAddTarget.DOCTOR)
+                            },
+                            onAddHospital = {
+                                showQuickAddModal = false
+                                viewModel.triggerQuickAdd(QuickAddTarget.HOSPITAL)
+                            },
+                            onAddTask = {
+                                showQuickAddModal = false
+                                viewModel.triggerQuickAdd(QuickAddTarget.TASK)
+                            }
+                        )
+                    }
+
+                    // Reset DB confirmation dialog
+                    if (showResetDbConfirm) {
+                        AlertDialog(
+                            onDismissRequest = { showResetDbConfirm = false },
+                            title = { Text("Zresetować bazę danych?") },
+                            text = { Text("Ta operacja przywróci domyślne rekordy szpitali, oddziałów i lekarzy z pliku PDF.") },
+                            confirmButton = {
+                                Button(
+                                    onClick = {
+                                        showResetDbConfirm = false
+                                        viewModel.resetDatabase()
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                                ) {
+                                    Text("Resetuj")
                                 }
                             },
-                            bottomBar = {
-                                if (currentScreen != "meeting_detail" && currentScreen != "login") {
-                                    CrmBottomNavigation(
-                                        currentScreen = currentScreen,
-                                        onNavigate = { screen -> viewModel.navigateTo(screen) }
-                                    )
+                            dismissButton = {
+                                TextButton(onClick = { showResetDbConfirm = false }) {
+                                    Text("Anuluj")
                                 }
                             }
-                        ) { innerPadding ->
-                            Surface(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(innerPadding),
-                                color = MaterialTheme.colorScheme.background
-                            ) {
-                                when (currentScreen) {
-                                    "dashboard" -> DashboardScreen(
-                                        viewModel = viewModel,
-                                        onNavigate = { screen, meetingId -> viewModel.navigateTo(screen, meetingId) }
-                                    )
-                                    "profile" -> ProfileScreen(
-                                        viewModel = viewModel,
-                                        onBack = { viewModel.navigateTo("dashboard") }
-                                    )
-                                    "contacts" -> ContactsScreen(
-                                        viewModel = viewModel,
-                                        onNavigateToMeeting = { meetingId -> viewModel.navigateTo("meeting_detail", meetingId) }
-                                    )
-                                    "meetings" -> MeetingsScreen(
-                                        viewModel = viewModel,
-                                        onNavigateToDetail = { meetingId -> viewModel.navigateTo("meeting_detail", meetingId) }
-                                    )
-                                    "meeting_detail" -> {
-                                        if (selectedMeetingId != null) {
-                                            MeetingDetailScreen(
-                                                meetingId = selectedMeetingId!!,
-                                                viewModel = viewModel,
-                                                onBack = { viewModel.navigateTo("meetings") }
-                                            )
-                                        } else {
-                                            MeetingsScreen(
-                                                viewModel = viewModel,
-                                                onNavigateToDetail = { meetingId -> viewModel.navigateTo("meeting_detail", meetingId) }
-                                            )
-                                        }
-                                    }
-                                    "calendar" -> CalendarScreen(
-                                        viewModel = viewModel,
-                                        onNavigateToMeeting = { meetingId -> viewModel.navigateTo("meeting_detail", meetingId) }
-                                    )
-                                    "tasks" -> TasksScreen(viewModel = viewModel)
-                                    "trips" -> TripsScreen(
-                                        viewModel = viewModel,
-                                        onNavigateToHospital = { /* no-op */ }
-                                    )
-                                    "manager" -> ManagerScreen(
-                                        viewModel = viewModel,
-                                        onNavigateToMeeting = { meetingId -> viewModel.navigateTo("meeting_detail", meetingId) }
-                                    )
-                                    "admin" -> AdminScreen(viewModel = viewModel)
-                                    else -> DashboardScreen(
-                                        viewModel = viewModel,
-                                        onNavigate = { screen, meetingId -> viewModel.navigateTo(screen, meetingId) }
-                                    )
-                                }
-                            }
-                        }
+                        )
                     }
                 }
             }

@@ -6357,9 +6357,9 @@ object SeedDataProvider {
         )
     )
 
-    fun getInitialMeetings(): List<MeetingEntity> = emptyList()
+    fun getInitialMeetings(): List<MeetingEntity> = InitialVisitsProvider.getInitialMeetings()
 
-    fun getInitialTasks(): List<TaskEntity> = emptyList()
+    fun getInitialTasks(): List<TaskEntity> = InitialVisitsProvider.getInitialTasks()
 
     fun getInitialTrips(): List<TripEntity> = emptyList()
 
